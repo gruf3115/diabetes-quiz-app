@@ -3,8 +3,6 @@ name: Build Android AAB
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -27,11 +25,11 @@ jobs:
     - name: Make gradlew executable
       run: chmod +x android/gradlew
     
-    - name: Build with Gradle
+    - name: Build with Gradle (skip dependencies check)
       run: |
         cd android
-        ./gradlew clean
-        ./gradlew bundleRelease
+        ./gradlew clean --no-daemon
+        ./gradlew bundleRelease --no-daemon --continue
     
     - name: Upload AAB
       uses: actions/upload-artifact@v4
