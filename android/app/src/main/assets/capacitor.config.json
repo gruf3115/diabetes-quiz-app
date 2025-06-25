@@ -1,0 +1,17 @@
+{
+	"appId": "com.diabetesquiz.app",
+	"appName": "당뇨 팩트체크 퀴즈",
+	"webDir": "dist/public",
+	"bundledWebRuntime": false,
+	"server": {
+		"androidScheme": "https"
+	},
+	"android": {},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 2000,
+			"backgroundColor": "#ffffff",
+			"showSpinner": false
+		}
+	}
+}
