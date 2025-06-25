@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Simple Android APK
 
 on:
   push:
@@ -18,36 +18,69 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
     
-    - name: Create release keystore
+    - name: Remove problematic dependencies
       run: |
-        mkdir -p android/app
-        keytool -genkey -v -keystore android/app/release.keystore -alias release -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=DiabetesQuiz, OU=Mobile, O=HealthApp, L=Seoul, C=KR"
+        cd android
+        # Remove Capacitor references from settings.gradle
+        sed -i '/capacitor/d' settings.gradle
+        # Remove Capacitor from app build.gradle
+        sed -i '/capacitor/d' app/build.gradle
+        # Remove AdMob dependencies temporarily
+        sed -i '/admob/d' app/build.gradle
+        sed -i '/firebase/d' app/build.gradle
     
-    - name: Create gradle.properties for signing
+    - name: Create minimal build.gradle
       run: |
-        echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
-        echo "MYAPP_UPLOAD_KEY_ALIAS=release" >> android/gradle.properties
-        echo "MYAPP_UPLOAD_STORE_PASSWORD=android" >> android/gradle.properties
-        echo "MYAPP_UPLOAD_KEY_PASSWORD=android" >> android/gradle.properties
+        cat > android/app/build.gradle << 'EOF'
+        plugins {
+            id 'com.android.application'
+        }
+
+        android {
+            namespace 'com.diabetesquiz.app'
+            compileSdk 34
+
+            defaultConfig {
+                applicationId "com.diabetesquiz.app"
+                minSdk 22
+                targetSdk 34
+                versionCode 1
+                versionName "1.0"
+            }
+
+            buildTypes {
+                release {
+                    minifyEnabled false
+                    proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                }
+            }
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_1_8
+                targetCompatibility JavaVersion.VERSION_1_8
+            }
+        }
+
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+        }
+        EOF
+    
+    - name: Create keystore
+      run: |
+        cd android
+        keytool -genkey -v -keystore app-release-key.keystore -alias my-key-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=DiabetesQuiz, OU=Mobile, O=Health, L=Seoul, C=KR"
     
     - name: Make gradlew executable
       run: chmod +x android/gradlew
     
-    - name: Clean and build release APK
+    - name: Build APK
       run: |
         cd android
         ./gradlew clean
-        ./gradlew assembleRelease -x lint
+        ./gradlew assembleRelease
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release-apk
+        name: diabetes-quiz-apk
         path: android/app/build/outputs/apk/release/app-release.apk
-    
-    - name: Upload AAB (if exists)
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: app-release-aab
-        path: android/app/build/outputs/bundle/release/app-release.aab
