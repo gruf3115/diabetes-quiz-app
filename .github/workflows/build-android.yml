@@ -1,4 +1,4 @@
-name: Build Android AAB
+name: Build Android APK
 
 on:
   push:
@@ -18,21 +18,36 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
     
-    - name: Create keystore
+    - name: Create release keystore
       run: |
-        keytool -genkey -v -keystore android/diabetes-quiz-key.keystore -alias diabetes-quiz -keyalg RSA -keysize 2048 -validity 10000 -storepass diabetes123 -keypass diabetes123 -dname "CN=Diabetes Quiz Team, OU=Mobile Development, O=Health Education, L=Seoul, C=KR"
+        mkdir -p android/app
+        keytool -genkey -v -keystore android/app/release.keystore -alias release -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=DiabetesQuiz, OU=Mobile, O=HealthApp, L=Seoul, C=KR"
+    
+    - name: Create gradle.properties for signing
+      run: |
+        echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
+        echo "MYAPP_UPLOAD_KEY_ALIAS=release" >> android/gradle.properties
+        echo "MYAPP_UPLOAD_STORE_PASSWORD=android" >> android/gradle.properties
+        echo "MYAPP_UPLOAD_KEY_PASSWORD=android" >> android/gradle.properties
     
     - name: Make gradlew executable
       run: chmod +x android/gradlew
     
-    - name: Build with Gradle (skip dependencies check)
+    - name: Clean and build release APK
       run: |
         cd android
-        ./gradlew clean --no-daemon
-        ./gradlew bundleRelease --no-daemon --continue
+        ./gradlew clean
+        ./gradlew assembleRelease -x lint
     
-    - name: Upload AAB
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release-signed-aab
+        name: app-release-apk
+        path: android/app/build/outputs/apk/release/app-release.apk
+    
+    - name: Upload AAB (if exists)
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: app-release-aab
         path: android/app/build/outputs/bundle/release/app-release.aab
